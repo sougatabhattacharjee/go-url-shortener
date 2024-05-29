@@ -26,6 +26,12 @@ func (s *URLService) ShortenURL(longURL, customAlias, domain string) (string, er
 		return "", errors.New("unsupported domain")
 	}
 
+	// Check if the combination of longURL and domain already exists
+	existingURL, err := s.repo.GetURLByLongURLAndDomain(longURL, domain)
+	if err == nil {
+		return fmt.Sprintf("%s/%s", existingURL.Domain, existingURL.ShortURL), nil
+	}
+
 	shortURL := customAlias
 	if shortURL == "" {
 		shortURL = utils.GenerateShortURL()
@@ -36,10 +42,11 @@ func (s *URLService) ShortenURL(longURL, customAlias, domain string) (string, er
 	url := &model.URL{
 		ShortURL:  shortURL,
 		LongURL:   longURL,
+		Domain:    domain,
 		CreatedAt: time.Now().Format(time.RFC3339),
 	}
 
-	err := s.repo.SaveURL(url)
+	err = s.repo.SaveURL(url)
 	if err != nil {
 		return "", err
 	}
@@ -68,9 +75,19 @@ func (s *URLService) GetLongURL(shortURL string) (string, error) {
 }
 
 func (s *URLService) GetURLDetails(shortURL string) (*model.URL, error) {
-	return s.repo.GetURL(shortURL)
+	url, err := s.repo.GetURL(shortURL)
+	if err != nil {
+		return nil, err
+	}
+	url.CompleteShortURL = fmt.Sprintf("%s/%s", url.Domain, url.ShortURL)
+	return url, nil
 }
 
 func (s *URLService) GetAnalytics(shortURL string) (*model.Analytics, error) {
-	return s.repo.GetAnalytics(shortURL)
+	analytics, err := s.repo.GetAnalytics(shortURL)
+	if err != nil {
+		return nil, err
+	}
+	analytics.CompleteShortURL = fmt.Sprintf("%s/%s", analytics.Domain, analytics.ShortURL)
+	return analytics, nil
 }
