@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"net/http"
-	"url-shortener/internal/model"
 	"url-shortener/internal/service"
+	"url-shortener/pkg/utils"
 )
 
 type URLHandler struct {
@@ -17,7 +17,7 @@ func NewURLHandler(service *service.URLService) *URLHandler {
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	var req model.ShortenRequest
+	var req service.ShortenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -69,4 +69,24 @@ func (h *URLHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(analytics)
+}
+
+func (h *URLHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	shortURL := vars["shortURL"]
+
+	urlDetails, err := h.service.GetURLDetails(shortURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	qrCode, err := utils.GenerateQRCode(urlDetails.CompleteShortURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Write(qrCode)
 }
