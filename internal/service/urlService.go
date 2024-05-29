@@ -11,25 +11,20 @@ import (
 	"url-shortener/pkg/utils"
 )
 
-const cacheExpiration = 5 * time.Minute
-
 type URLService struct {
 	repo            repository.URLRepository
 	cache           *cache.Cache
 	shortURLDomains []string
+	cacheExpiration time.Duration
 }
 
-type ShortenRequest struct {
-	LongURL     string `json:"long_url"`
-	CustomAlias string `json:"custom_alias,omitempty"`
-	Domain      string `json:"domain"`
-}
-
-func NewURLService(repo repository.URLRepository, cache *cache.Cache, shortURLDomains []string) *URLService {
+func NewURLService(repo repository.URLRepository, cache *cache.Cache, shortURLDomains []string, cacheExpiration time.Duration) *URLService {
+	log.Printf("Initializing URLService with domains: %v", shortURLDomains) // Add logging
 	return &URLService{
 		repo:            repo,
 		cache:           cache,
 		shortURLDomains: shortURLDomains,
+		cacheExpiration: cacheExpiration,
 	}
 }
 
@@ -49,7 +44,7 @@ func (s *URLService) ShortenURL(longURL, customAlias, domain string) (string, er
 	existingURL, err := s.repo.GetURLByLongURLAndDomain(longURL, domain)
 	if err == nil {
 		shortURL := fmt.Sprintf("%s/%s", existingURL.Domain, existingURL.ShortURL)
-		s.cache.Set(cacheKey, shortURL, cacheExpiration)
+		s.cache.Set(cacheKey, shortURL, s.cacheExpiration)
 		log.Printf("Database hit: %s", cacheKey)
 		return shortURL, nil
 	}
@@ -74,13 +69,14 @@ func (s *URLService) ShortenURL(longURL, customAlias, domain string) (string, er
 		return "", err
 	}
 
-	s.cache.Set(cacheKey, fullShortURL, cacheExpiration)
+	s.cache.Set(cacheKey, fullShortURL, s.cacheExpiration)
 	log.Printf("Generated and cached: %s", cacheKey)
 
 	return fullShortURL, nil
 }
 
 func (s *URLService) isValidDomain(domain string) bool {
+	log.Printf("Validating domain: %s", domain) // Add logging
 	for _, d := range s.shortURLDomains {
 		if d == domain {
 			return true
@@ -95,7 +91,9 @@ func (s *URLService) GetLongURL(shortURL string) (string, error) {
 		return "", err
 	}
 
-	s.repo.IncrementClicks(shortURL)
+	if err := s.repo.IncrementClicks(shortURL); err != nil {
+		log.Printf("Failed to increment clicks for %s: %v", shortURL, err)
+	}
 
 	return url.LongURL, nil
 }

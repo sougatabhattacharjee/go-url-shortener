@@ -4,18 +4,19 @@ import (
 	"database/sql"
 	"github.com/gorilla/mux"
 	"log"
+	"time"
 	"url-shortener/internal/cache"
 	"url-shortener/internal/handler"
 	"url-shortener/internal/repository"
 	"url-shortener/internal/service"
 )
 
-func Setup(db *sql.DB, cache *cache.Cache, shortURLDomains []string) *mux.Router {
+func Setup(db *sql.DB, cache *cache.Cache, shortURLDomains []string, cacheExpiration time.Duration) *mux.Router {
 	repo, err := repository.NewPostgresRepository(db)
 	if err != nil {
 		log.Fatalf("Could not create repository: %v", err)
 	}
-	urlService := service.NewURLService(repo, cache, shortURLDomains)
+	urlService := service.NewURLService(repo, cache, shortURLDomains, cacheExpiration)
 	urlHandler := handler.NewURLHandler(urlService)
 
 	r := mux.NewRouter()
