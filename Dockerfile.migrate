@@ -1,0 +1,16 @@
+# Use the official PostgreSQL image as the base image
+FROM postgres:13
+
+# Set environment variables
+ENV POSTGRES_USER=user
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=urlshortener
+
+# Copy the migration script
+COPY init.sql /docker-entrypoint-initdb.d/init.sql
+
+# Copy the migration entrypoint script
+COPY migrate.sh /usr/local/bin/migrate.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/migrate.sh"]
