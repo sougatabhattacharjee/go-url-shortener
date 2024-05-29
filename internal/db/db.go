@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func MustConnect(connectionString string) (*sql.DB, func()) {
+func InitDB(connectionString string) (*sql.DB, func()) {
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"net/http"
+	"url-shortener/internal/model"
 	"url-shortener/internal/service"
 	"url-shortener/pkg/utils"
 )
@@ -17,7 +18,7 @@ func NewURLHandler(service *service.URLService) *URLHandler {
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	var req service.ShortenRequest
+	var req model.ShortenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -29,7 +30,10 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"short_url": shortURL})
+	response := map[string]string{"short_url": shortURL}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (h *URLHandler) Redirect(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +59,9 @@ func (h *URLHandler) GetURLDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(urlDetails)
+	if err := json.NewEncoder(w).Encode(urlDetails); err != nil {
+		http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (h *URLHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +74,9 @@ func (h *URLHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(analytics)
+	if err := json.NewEncoder(w).Encode(analytics); err != nil {
+		http.Error(w, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (h *URLHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
@@ -88,5 +96,7 @@ func (h *URLHandler) GenerateQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "image/png")
-	w.Write(qrCode)
+	if _, err := w.Write(qrCode); err != nil {
+		http.Error(w, "Failed to write QR code: "+err.Error(), http.StatusInternalServerError)
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 	"url-shortener/internal/cache"
 	"url-shortener/internal/config"
+	"url-shortener/internal/db"
 	"url-shortener/internal/router"
 
 	"github.com/gorilla/mux"
@@ -18,14 +19,14 @@ func main() {
 	cfg := initConfig()
 
 	// Initialize database connection
-	dbConn, cleanup := initDB(cfg.DatabaseURL)
+	dbConn, cleanup := db.InitDB(cfg.DatabaseURL)
 	defer cleanup()
 
 	// Initialize cache
-	cache := cache.NewCache(5*time.Minute, 10*time.Minute)
+	urlCache := cache.NewCache(cfg.CacheExpiration, 10*time.Minute)
 
 	// Setup router
-	r := initRouter(dbConn, cache, cfg.ShortURLDomains)
+	r := initRouter(dbConn, urlCache, cfg.ShortURLDomains, cfg.CacheExpiration)
 
 	// Start server
 	startServer(cfg.Port, r)
@@ -33,28 +34,18 @@ func main() {
 
 func initConfig() *config.Config {
 	config.LoadConfig()
-	return &config.Config{
+	cfg := &config.Config{
 		Port:            config.GetEnv("PORT"),
 		DatabaseURL:     config.GetEnv("DATABASE_URL"),
 		ShortURLDomains: config.GetEnvAsSlice("SHORT_URL_DOMAINS", ","),
+		CacheExpiration: config.GetEnvAsDuration("CACHE_EXPIRATION"),
 	}
+	log.Printf("Loaded configuration: %+v", cfg) // Add logging
+	return cfg
 }
 
-func initDB(databaseURL string) (*sql.DB, func()) {
-	db, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		log.Fatalf("Could not connect to database: %v", err)
-	}
-	if err = db.Ping(); err != nil {
-		log.Fatalf("Could not ping database: %v", err)
-	}
-	return db, func() {
-		db.Close()
-	}
-}
-
-func initRouter(dbConn *sql.DB, cache *cache.Cache, shortURLDomains []string) *mux.Router {
-	return router.Setup(dbConn, cache, shortURLDomains)
+func initRouter(dbConn *sql.DB, urlCache *cache.Cache, shortURLDomains []string, cacheExpiration time.Duration) *mux.Router {
+	return router.Setup(dbConn, urlCache, shortURLDomains, cacheExpiration)
 }
 
 func startServer(port string, r *mux.Router) {

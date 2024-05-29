@@ -1,6 +1,6 @@
 # URL Shortener Service
 
-A simple URL shortener service built with Go and PostgreSQL. This service allows users to shorten URLs with a choice of predefined domains and provides analytics on the shortened URLs.
+A simple URL shortener service built with Go and Postgres. This service allows users to shorten URLs with a choice of predefined domains and provides analytics on the shortened URLs.
 
 ## Table of Contents
 
