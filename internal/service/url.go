@@ -19,6 +19,12 @@ type URLService struct {
 	shortURLDomains []string
 }
 
+type ShortenRequest struct {
+	LongURL     string `json:"long_url"`
+	CustomAlias string `json:"custom_alias,omitempty"`
+	Domain      string `json:"domain"`
+}
+
 func NewURLService(repo repository.URLRepository, cache *cache.Cache, shortURLDomains []string) *URLService {
 	return &URLService{
 		repo:            repo,

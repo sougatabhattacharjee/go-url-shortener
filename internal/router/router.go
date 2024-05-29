@@ -23,6 +23,7 @@ func Setup(db *sql.DB, cache *cache.Cache, shortURLDomains []string) *mux.Router
 	r.HandleFunc("/{shortURL}", urlHandler.Redirect).Methods("GET")
 	r.HandleFunc("/api/v1/urls/{shortURL}", urlHandler.GetURLDetails).Methods("GET")
 	r.HandleFunc("/api/v1/urls/{shortURL}/analytics", urlHandler.GetAnalytics).Methods("GET")
+	r.HandleFunc("/api/v1/urls/{shortURL}/qrcode", urlHandler.GenerateQRCode).Methods("GET")
 
 	return r
 }
