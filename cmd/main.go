@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
+	"url-shortener/internal/cache"
 	"url-shortener/internal/config"
 	"url-shortener/internal/router"
 
@@ -19,8 +21,11 @@ func main() {
 	dbConn, cleanup := initDB(cfg.DatabaseURL)
 	defer cleanup()
 
+	// Initialize cache
+	cache := cache.NewCache(5*time.Minute, 10*time.Minute)
+
 	// Setup router
-	r := initRouter(dbConn, cfg.ShortURLDomains)
+	r := initRouter(dbConn, cache, cfg.ShortURLDomains)
 
 	// Start server
 	startServer(cfg.Port, r)
@@ -48,8 +53,8 @@ func initDB(databaseURL string) (*sql.DB, func()) {
 	}
 }
 
-func initRouter(dbConn *sql.DB, shortURLDomains []string) *mux.Router {
-	return router.Setup(dbConn, shortURLDomains)
+func initRouter(dbConn *sql.DB, cache *cache.Cache, shortURLDomains []string) *mux.Router {
+	return router.Setup(dbConn, cache, shortURLDomains)
 }
 
 func startServer(port string, r *mux.Router) {
